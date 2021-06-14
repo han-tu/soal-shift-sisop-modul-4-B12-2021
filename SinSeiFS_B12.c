@@ -8,8 +8,25 @@
 #include <errno.h>
 #include <sys/time.h>
 
-static  const  char *dirpath = "/home/han/Downloads";
+static  const  char *dirpath = "/home/zea/Downloads/";
+static const char *logPath = "/home/zea/cobaprak4/SinSeiFS.log";
 int mirrorOnReaddirHelper ;
+
+void logging(int warn, char *cmd, const char *desc) {
+  char buffer[80], mode[8];
+  FILE * LOG = fopen(logPath, "a");
+  time_t t;
+  time(&t);
+  struct tm *timeinfo = localtime(&t);
+  //printf(".%02d%02d%02d:%d-%02d-%02d.\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,timeinfo->tm_year+1900, timeinfo->tm_mon+1, timeinfo->tm_mday);
+
+  if (!warn) strcpy(mode, "INFO");
+  else strcpy(mode, "WARNING");
+  //strftime(buffer, 80, "%y%m%d-%H:%M:%S", tm);
+  sprintf(buffer, "%02d%02d%02d-%d:%02d:%02d", timeinfo->tm_mday, timeinfo->tm_mon+1,timeinfo->tm_year+1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec );
+  fprintf(LOG, "%s::%s:%s::%s\n", mode, buffer, cmd, desc);
+  fclose(LOG);
+}
 
 char* mirror(char real[]) {
     char str[1024] ;
@@ -241,6 +258,8 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	res = lstat(fpath, stbuf);
 	if (res == -1)
 		return -errno;
+    
+    //logging(0, "GETATTR", path);
 
 	return 0;
 }
@@ -248,15 +267,17 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 static int xmp_rename(const char *from, const char *to)
 {
     char* lastSlash = strchr(to, '/') ;
+    
     if (strstr(lastSlash, "/AtoZ_")) {
+        char str[1024];
         char t1[1024] ; bzero(t1, 1024) ;
         char t2[1024] ; bzero(t2, 1024) ;
         sprintf(t1, "%s%s", dirpath, from) ;
         sprintf(t2, "%s%s", dirpath, to) ;
-        logRecord(t1, t2, 1) ;
+        //logRecord(t1, t2, 1) ;
     }
 
-    char f_from[1024] ; char f_to[1024] ;
+    char f_from[1024] ; char f_to[1024] ; char str[100] ;
     bzero(f_from, 1024) ; bzero(f_to, 1024) ;
     strcpy(f_from, find_fpath(from)) ;
     strcpy(f_to, find_fpath(to)) ;
@@ -267,16 +288,20 @@ static int xmp_rename(const char *from, const char *to)
 	if (res == -1)
 		return -errno;
 
+    sprintf(str, "%s::%s", from, to);
+    logging(0, "RENAME", str);
+    
 	return 0;
 }
 
 static int xmp_mkdir(const char *path, mode_t mode)
 {
-    char* lastSlash = strchr(path, '/') ;
+    char* lastSlash = strrchr(path, '/') ;
     if (strstr(lastSlash, "/AtoZ_")) {
         char temp[1024] ; bzero(temp, 1024) ;
         sprintf(temp, "%s%s", dirpath, path) ;
-        logRecord("gapenting", temp, 2) ;
+        //logRecord("gapenting", temp, 2) ;
+        
     }
 
     char fpath[1024] ;
@@ -288,8 +313,60 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	if (res == -1)
 		return -errno;
 
+    logging(0, "MKDIR", path);
+
 	return 0;
 }
+
+static int xmp_rmdir(const char *path)
+{
+    char fpath[1024] ;
+    bzero(fpath, 1024) ;
+    strcpy(fpath, find_fpath(path)) ;
+	int res;
+
+    res = rmdir(fpath);
+	if (res == -1)
+		return -errno;
+    
+    logging(1, "RMDIR", path);
+
+	return 0;
+}
+
+static int xmp_write(const char *path, const char *buf, size_t size, off_t ofdirpathet, struct fuse_file_info *fi)
+{
+  char fpath[1000];
+  sprintf(fpath, "%s%s", dirpath, path);
+  int fd, res;
+
+  (void) fi;
+  fd = open(fpath, O_WRONLY);
+  if (fd == -1) return -errno;
+
+  res = pwrite(fd, buf, size, ofdirpathet);
+  if (res == -1) res = -errno;
+  logging(0, "WRITE", path);
+  close(fd);
+
+  return res;
+}
+
+static int xmp_unlink(const char *path)
+{
+    char fpath[1000];
+  sprintf(fpath, "%s%s", dirpath, path);
+	int res;
+
+	res = unlink(fpath);
+	if (res == -1)
+		return -errno;
+    
+    logging(1, "UNLINK", path);
+
+	return 0;
+}
+
 
 static struct fuse_operations xmp_oper = {
     .getattr = xmp_getattr,
@@ -297,6 +374,9 @@ static struct fuse_operations xmp_oper = {
     .read = xmp_read,
     .rename = xmp_rename,
     .mkdir = xmp_mkdir,
+    .rmdir = xmp_rmdir,
+    .write = xmp_write,
+    .unlink = xmp_unlink,
 };
 
 /* End XMP Field */
