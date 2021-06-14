@@ -32,6 +32,10 @@ e. Jika tidak, lakukan atbash pada kata tersebut dan sambungkan ke variabel real
 f. Jika iya, hanya lakukan atbash cipher pada nama file nya saja (tidak mengikutsertakan extension)
 g. Jika semua kata pada path sudah di proses.. sambungkan Path /home/[user]/Downloads dengan real path
 
+Kendala : 
+1. Sring sekali gagal menyocokkan path nya
+2. Bingung membedakan file dengan folder
+
 ### Mengimplementasikan Readdir
 Readdir di implementasikan dengan adanya modifikasi dari fuse biasa :
 1. Path yang didapat di awal fungsi di konversi ke real absolute path
@@ -106,6 +110,9 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 ```
 
+Kendala :
+1. Mirip dengan poin sebelumnya
+
 ### Mengimplementasikan Read, getattr, rename, dan mkdir
 ke-4 fungsi tersebut di implementasikan dengan memodifikasi path yang masuk menjadi real absolute path menggunakan fungsi yang telah dibuat. Tidak ada perubahan signifikan dari kode asalnya
 ```c
@@ -114,6 +121,8 @@ bzero(fpath, 1000) ;
 strcpy(fpath, find_fpath(path)) ;
 ```
 Hanya menambahkan perintah diatas diawal fungsi, dan merubah path yang diproses menjadi fpath
+
+Tidak ada kendala pada poin ini.
 
 ### Mengimplementasikan Record Log untuk Fungsi rename dan mkdir
 Penulisan memiliki 2 mode, yaitu mode "rename" (pada kode mode 1) dan mode "mkdir" (pada kode mode 2).
@@ -162,4 +171,5 @@ if (strstr(lastSlash, "/AtoZ_")) {
 }
 ```
 
+Tidak ada kendala pada poin ini.
 
