@@ -173,3 +173,191 @@ if (strstr(lastSlash, "/AtoZ_")) {
 
 Tidak ada kendala pada poin ini.
 
+## Nomor 4
+
+### Membuat log system
+
+Fungsi untuk membuat log sebagai berikut:
+```c
+static const char *logPath = "/home/zea/cobaprak4/SinSeiFS.log";
+
+void logging(int warn, char *cmd, const char *desc) {
+  char buffer[80], mode[8];
+  FILE * LOG = fopen(logPath, "a");
+  time_t t;
+  time(&t);
+  struct tm *timeinfo = localtime(&t);
+  //printf(".%02d%02d%02d:%d-%02d-%02d.\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,timeinfo->tm_year+1900, timeinfo->tm_mon+1, timeinfo->tm_mday);
+
+  if (!warn) strcpy(mode, "INFO");
+  else strcpy(mode, "WARNING");
+  //strftime(buffer, 80, "%y%m%d-%H:%M:%S", tm);
+  sprintf(buffer, "%02d%02d%02d-%d:%02d:%02d", timeinfo->tm_mday, timeinfo->tm_mon+1,timeinfo->tm_year+1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec );
+  fprintf(LOG, "%s::%s:%s::%s\n", mode, buffer, cmd, desc);
+  fclose(LOG);
+}
+```
+
+Penjelasan:\
+Pertanyaan a\
+```FILE * LOG = fopen(logPath, "a");``` untuk menyimpan log dalam file
+SinSeiFS.log. ```"a"``` berarti jika file sudah ada dan sudah terdapat
+data di dalam file tersebut, maka data baru akan diappend.
+
+Pertanyaan b
+```
+if (!warn) strcpy(mode, "INFO");
+    else strcpy(mode, "WARNING");
+``` 
+digunakan variabel warn untuk membedakan level log INFO atau
+WARNING.
+
+Pertanyaan e
+```
+time_t t;
+time(&t);
+struct tm *timeinfo = localtime(&t);
+``` 
+untuk menyimpan data waktu.
+```
+sprintf(buffer, "%02d%02d%02d-%d:%02d:%02d", timeinfo->tm_mday, timeinfo->tm_mon+1,timeinfo->tm_year+1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec );
+fprintf(LOG, "%s::%s:%s::%s\n", mode, buffer, cmd, desc);
+``` 
+untuk format log sesuai yang diminta pertanyaan.
+
+### Mencatat system call
+
+Memanggil fungsi log tiap system call:
+```logging([level log], "[system call yang terpanggil]", [informasi / parameter tambahan]);
+```
+
+Penjelasan:\
+Pertanyaan c\
+Level WARNING untuk rmdir
+```
+static int xmp_rmdir(const char *path)
+{
+    char fpath[1024] ;
+    bzero(fpath, 1024) ;
+    strcpy(fpath, find_fpath(path)) ;
+	int res;
+
+    res = rmdir(fpath);
+	if (res == -1)
+		return -errno;
+    
+    logging(1, "RMDIR", path);
+
+	return 0;
+}
+```
+Level WARNING untuk unlink
+```
+static int xmp_unlink(const char *path)
+{
+    char fpath[1000];
+  sprintf(fpath, "%s%s", dirpath, path);
+	int res;
+
+	res = unlink(fpath);
+	if (res == -1)
+		return -errno;
+    
+    logging(1, "UNLINK", path);
+
+	return 0;
+}
+```
+
+Pertanyaan d\
+Level INFO untuk rename
+```
+static int xmp_rename(const char *from, const char *to)
+{
+    char* lastSlash = strchr(to, '/') ;
+    
+    if (strstr(lastSlash, "/AtoZ_")) {
+        char str[1024];
+        char t1[1024] ; bzero(t1, 1024) ;
+        char t2[1024] ; bzero(t2, 1024) ;
+        sprintf(t1, "%s%s", dirpath, from) ;
+        sprintf(t2, "%s%s", dirpath, to) ;
+        //logRecord(t1, t2, 1) ;
+    }
+
+    char f_from[1024] ; char f_to[1024] ; char str[100] ;
+    bzero(f_from, 1024) ; bzero(f_to, 1024) ;
+    strcpy(f_from, find_fpath(from)) ;
+    strcpy(f_to, find_fpath(to)) ;
+
+	int res;
+
+	res = rename(f_from, f_to);
+	if (res == -1)
+		return -errno;
+
+    sprintf(str, "%s::%s", from, to);
+    logging(0, "RENAME", str);
+    
+	return 0;
+}
+```
+Level INFO untuk mkdir
+```
+static int xmp_mkdir(const char *path, mode_t mode)
+{
+    char* lastSlash = strrchr(path, '/') ;
+    if (strstr(lastSlash, "/AtoZ_")) {
+        char temp[1024] ; bzero(temp, 1024) ;
+        sprintf(temp, "%s%s", dirpath, path) ;
+        //logRecord("gapenting", temp, 2) ;
+        
+    }
+
+    char fpath[1024] ;
+    bzero(fpath, 1024) ;
+    strcpy(fpath, find_fpath(path)) ;
+	int res;
+
+	res = mkdir(fpath, mode);
+	if (res == -1)
+		return -errno;
+
+    logging(0, "MKDIR", path);
+
+	return 0;
+}
+```
+Level INFO untuk write
+```
+static int xmp_write(const char *path, const char *buf, size_t size, off_t ofdirpathet, struct fuse_file_info *fi)
+{
+  char fpath[1000];
+  sprintf(fpath, "%s%s", dirpath, path);
+  int fd, res;
+
+  (void) fi;
+  fd = open(fpath, O_WRONLY);
+  if (fd == -1) return -errno;
+
+  res = pwrite(fd, buf, size, ofdirpathet);
+  if (res == -1) res = -errno;
+  logging(0, "WRITE", path);
+  close(fd);
+
+  return res;
+}
+```
+
+### Hasil dan screenshot
+
+![ss1](https://imgur.com/4s1brVb.png)
+![ss2](https://imgur.com/tGCuoIJ.png)
+
+### Kendala
+
+1. Terdapat error ketika compile yang tidak saya sadari
+2. File log tidak muncul dimana mana
+3. File log muncul, tetapi tidak dapat melakukan system call
+4. Terjebak di dalam infinity loop
+5. Fungsi write masih belum bisa
