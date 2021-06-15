@@ -205,7 +205,7 @@ SinSeiFS.log. ```"a"``` berarti jika file sudah ada dan sudah terdapat
 data di dalam file tersebut, maka data baru akan diappend.
 
 Pertanyaan b
-```
+```c
 if (!warn) strcpy(mode, "INFO");
     else strcpy(mode, "WARNING");
 ``` 
@@ -213,13 +213,13 @@ digunakan variabel warn untuk membedakan level log INFO atau
 WARNING.
 
 Pertanyaan e
-```
+```c
 time_t t;
 time(&t);
 struct tm *timeinfo = localtime(&t);
 ``` 
 untuk menyimpan data waktu.
-```
+```c
 sprintf(buffer, "%02d%02d%02d-%d:%02d:%02d", timeinfo->tm_mday, timeinfo->tm_mon+1,timeinfo->tm_year+1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec );
 fprintf(LOG, "%s::%s:%s::%s\n", mode, buffer, cmd, desc);
 ``` 
@@ -228,13 +228,14 @@ untuk format log sesuai yang diminta pertanyaan.
 ### Mencatat system call
 
 Memanggil fungsi log tiap system call:
-```logging([level log], "[system call yang terpanggil]", [informasi / parameter tambahan]);
+```c
+logging([level log], "[system call yang terpanggil]", [informasi / parameter tambahan]);
 ```
 
 Penjelasan:\
 Pertanyaan c\
 Level WARNING untuk rmdir
-```
+```c
 static int xmp_rmdir(const char *path)
 {
     char fpath[1024] ;
@@ -252,7 +253,7 @@ static int xmp_rmdir(const char *path)
 }
 ```
 Level WARNING untuk unlink
-```
+```c
 static int xmp_unlink(const char *path)
 {
     char fpath[1000];
@@ -271,7 +272,7 @@ static int xmp_unlink(const char *path)
 
 Pertanyaan d\
 Level INFO untuk rename
-```
+```c
 static int xmp_rename(const char *from, const char *to)
 {
     char* lastSlash = strchr(to, '/') ;
@@ -303,7 +304,7 @@ static int xmp_rename(const char *from, const char *to)
 }
 ```
 Level INFO untuk mkdir
-```
+```c
 static int xmp_mkdir(const char *path, mode_t mode)
 {
     char* lastSlash = strrchr(path, '/') ;
@@ -329,7 +330,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 }
 ```
 Level INFO untuk write
-```
+```c
 static int xmp_write(const char *path, const char *buf, size_t size, off_t ofdirpathet, struct fuse_file_info *fi)
 {
   char fpath[1000];
